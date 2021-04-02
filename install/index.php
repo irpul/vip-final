@@ -252,7 +252,7 @@ $usernamedb=$_POST['usernamedb'];
 $passworddb=$_POST['passworddb'];
 $db_conn=$_POST['db_conn'];
 $server=$_POST['server'];
-$MerchantID= $_POST['MerchantID'];
+$token= $_POST['token'];
 mysql_connect($serverdb,$usernamedb,$passworddb) or $error="اطلاعات وارد شده برای متصل شدن به سرور اشتباه است<br>"; 
 @mysql_select_db($db_conn) or $error.="بانک اطلاعاتی مورد نظر یا قبلا ثبت شده یا اصلا به ثبت نرسیده !";
 if(!$error)
@@ -266,7 +266,7 @@ $passworddb = "'.$passworddb.'";
 $serverdb = "'.$serverdb.'";
 $db_conn = "'.$db_conn.'";
 $GLOBALS["localhost"]="'.$server.'";
-$MerchantID= "'.$MerchantID .'";
+$token= "'.$token .'";
 
 date_default_timezone_set("Asia/Tehran");
 
@@ -356,9 +356,9 @@ default:
         
          </div>
          <hr/>
-	 <label for="title" style="color:#06C">شناسه درگاه ثبت شده خود را در ایرپول وارد کنید</label>
+	 <label for="title" style="color:#06C">توکن درگاه ثبت شده خود را در ایرپول وارد کنید</label>
             <div class="input"> 
-              <input value="" type="text" size="60" name="MerchantID" id="MerchantID" class="xlarge" dir="ltr" placeholder="xxxxxx">
+              <input value="" type="text" size="60" name="token" id="token" class="xlarge" dir="ltr" placeholder="xxxxxx">
     	<hr/>
     	  <div class="actions">
             <input type="submit" value="ارسال" class="btn primary">&nbsp;<button class="btn" type="reset">لغو</button>

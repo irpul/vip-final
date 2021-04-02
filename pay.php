@@ -44,28 +44,33 @@ else {
 	echo "اطلاعات ارسالی کامل نیست ...";	
 }	
 	
-$api 		= $MerchantID;
+
 $order_id 	= rand(1111111111,9999999999);
 $redirect 	= urlencode($CallbackURL);
 $description = "شارژ اکانت به مدت $cat_time روز";
 
-$result 	= sendt($api,$amount,$order_id,$product,$username,$mobile,$useremail,$redirect,$description);
+$result 	= sendt($token,$amount,$order_id,$product,$username,$mobile,$useremail,$redirect,$description);
 
+if( isset($result['http_code']) ){
+	$data =  json_decode($result['data'],true);
 
-if( $result['res_code']===1 && is_numeric($result['res_code']) ){
-	$go = $result['url'];
-	header("Location: $go");
-	return;
+	if( isset($data['code']) && $data['code'] === 1){
+		header("Location: " . $data['url']);
+		exit;
+	}
+	else{
+		echo "Error Code: ".$data['code'] . ' ' . $data['status'];
+	}
+}else{
+	echo 'پاسخی از سرویس دهنده دریافت نشد. لطفا دوباره تلاش نمائید';
 }
-// error
-getirpulError($result);
+
+//getirpulError($result);
 exit;
 
-function sendt($api,$amount,$order_id,$product,$username,$mobile,$email,$redirect , $description){
-	$parameters = array
-	(
-		'plugin'		=> 'VIP_Final',
-		'webgate_id' 	=> $api,
+function sendt($token,$amount,$order_id,$product,$username,$mobile,$email,$redirect , $description){
+	$parameters = array(
+		'method' 		=> 'payment',
 		'order_id'		=> $order_id,
 		'product'		=> $product,
 		'payer_name'	=> $username ,
@@ -76,55 +81,13 @@ function sendt($api,$amount,$order_id,$product,$username,$mobile,$email,$redirec
 		'callback_url' 	=> $redirect,
 		'address' 		=> '',
 		'description' 	=> $description,
+		'test_mode' 	=> false,
 	);
 	//print_r($parameters);exit;
-	try {
-		$client = new SoapClient('https://irpul.ir/webservice.php?wsdl' , array('soap_version'=>'SOAP_1_2','cache_wsdl'=>WSDL_CACHE_NONE ,'encoding'=>'UTF-8'));
-		$result = $client->Payment($parameters);
-	}catch (Exception $e) { echo 'Error'. $e->getMessage();  }
+
+	$result 	= post_data('https://irpul.ir/ws.php', $parameters, $token );
+
 	return $result;
 }
 
-function getirpulError( $result ){
-	if($result['res_code']=='-1'){
-		echo "<br> شناسه درگاه مشخص نشده است";
-	}
-	elseif($result['res_code']=='-2'){
-		echo "<br> شناسه درگاه صحیح نمی باشد";
-	}
-	elseif($result['res_code']=='-3'){
-		echo "<br> شما حساب کاربری خود را در ایرپول تایید نکرده اید";
-	}
-	elseif($result['res_code']=='-4'){
-		echo "<br> مبلغ قابل پرداخت تعیین نشده است";
-	}
-	elseif($result['res_code']=='-5'){
-		echo "<br> مبلغ قابل پرداخت صحیح نمی باشد";
-	}
-	elseif($result['res_code']=='-6'){
-		echo "<br> شناسه تراکنش صحیح نمی باشد";
-	}
-	elseif($result['res_code']=='-7'){
-		echo "<br> آدرس بازگشت مشخص نشده است";
-	}
-	elseif($result['res_code']=='-8'){
-		echo "<br> آدرس بازگشت صحیح نمی باشد";
-	}
-	elseif($result['res_code']=='-9'){
-		echo "<br> آدرس ایمیل وارد شده صحیح نمی باشد";
-	}
-	elseif($result['res_code']=='-10'){
-		echo "<br> شماره تلفن وارد شده صحیح نمی باشد";
-	}
-	elseif($result['res_code']=='-12'){
-		echo "<br> نام پلاگین (Plugin) مشخص نشده است";
-	}
-	elseif($result['res_code']=='-13'){
-		echo "<br> نام پلاگین (Plugin) صحیح نیست";
-	}
-	else{
-		echo "<br> پاسخی دریافت نشد لطفا مجدد تلاش کنید. کد خطا : "  . $result['res_code'] . ' ' . $result['status'];
-	}		
-	exit;
-}	
 ?>

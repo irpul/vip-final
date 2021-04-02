@@ -46,6 +46,70 @@ if(is_numeric($cat_time)){
 </header>
 
 <?php
+function post_data($url,$params,$token) {
+	ini_set('default_socket_timeout', 15);
+
+	$headers = array(
+		"Authorization: token= {$token}",
+		'Content-type: application/json'
+	);
+
+	$handle = curl_init($url);
+	curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 30);
+	curl_setopt($handle, CURLOPT_TIMEOUT, 40);
+
+	curl_setopt($handle, CURLOPT_POSTFIELDS, json_encode($params) );
+	curl_setopt($handle, CURLOPT_HTTPHEADER, $headers );
+
+	$response = curl_exec($handle);
+	//error_log('curl response1 : '. print_r($response,true));
+
+	$msg='';
+	$http_code = intval(curl_getinfo($handle, CURLINFO_HTTP_CODE));
+
+	$status= true;
+
+	if ($response === false) {
+		$curl_errno = curl_errno($handle);
+		$curl_error = curl_error($handle);
+		$msg .= "Curl error $curl_errno: $curl_error";
+		$status = false;
+	}
+
+	curl_close($handle);//dont move uppder than curl_errno
+
+	if( $http_code == 200 ){
+		$msg .= "Request was successfull";
+	}
+	else{
+		$status = false;
+		if ($http_code == 400) {
+			$status = true;
+		}
+		elseif ($http_code == 401) {
+			$msg .= "Invalid access token provided";
+		}
+		elseif ($http_code == 502) {
+			$msg .= "Bad Gateway";
+		}
+		elseif ($http_code >= 500) {// do not wat to DDOS server if something goes wrong
+			sleep(2);
+		}
+	}
+
+	$res['http_code'] 	= $http_code;
+	$res['status'] 		= $status;
+	$res['msg'] 		= $msg;
+	$res['data'] 		= $response;
+
+	if(!$status){
+		//error_log(print_r($res,true));
+	}
+	return $res;
+}
+
+
 	function url_decrypt($string){
 		$counter = 0;
 		$data = str_replace(array('-','_','.'),array('+','/','='),$string);
@@ -84,44 +148,45 @@ if(is_numeric($cat_time)){
 			$status 	= $ir_output['status'];
 			
 			if($status == 'paid'){
-				$api = $MerchantID;
-				//$result = gett($api,$tran_id,$Amount);
-				
+
 				$parameters = array(
-					'webgate_id'	=> $MerchantID,
-					'tran_id' 		=> $tran_id,
+					'method' 	    => 'verify',
+					'trans_id' 		=> $tran_id,
 					'amount'	 	=> $Amount,
 				);
-				try {
-					$client = new SoapClient('https://irpul.ir/webservice.php?wsdl' , array('soap_version'=>'SOAP_1_2','cache_wsdl'=>WSDL_CACHE_NONE ,'encoding'=>'UTF-8'));
-					$result = $client->PaymentVerification($parameters);
-				}catch (Exception $e) { echo 'Error'. $e->getMessage();  }
-					
-				if($result == '1'){ ?>
-					<div class="container_12 clearfix">
-					<div id="desc" class="grid_12">
-					 <div class="success msg">
-					 <p>پرداخت شما با موفقیت انجام شد</p>
-						<p>شماره تراکنش شما : <?php echo $tran_id ?></p>
-						<p>لطفا در حفظ این شماره تراکنش دقت فرمایید</p>
-					</div>
-					</div>
-					</div>
+
+				$result =  post_data('https://irpul.ir/ws.php', $parameters, $token );
+
+				if( isset($result['http_code']) ){
+					$data =  json_decode($result['data'],true);
+
+					if( isset($data['code']) && $data['code'] === 1){
+?>
+
+						<div class="container_12 clearfix">
+							<div id="desc" class="grid_12">
+								<div class="success msg">
+									<p>پرداخت شما با موفقیت انجام شد</p>
+									<p>شماره تراکنش شما : <?php echo $tran_id ?></p>
+									<p>لطفا در حفظ این شماره تراکنش دقت فرمایید</p>
+								</div>
+							</div>
+						</div>
 <?php
-					$sql_del	= mysql_query("UPDATE `users` SET `active` = '1' , `time` ='". $time. "'  , `endtime`= '". $endtime ."' , `cat`='". $catid."' WHERE `id` ='".$id."';");
-					$time		= jgetgmdate($time);
-					$endtime	= jgetgmdate($endtime);
-					
-					$user_ver 	=  mysql_fetch_array(mysql_query("SELECT * FROM `users` where `user`='$username'"));
-					$useremail 	= $user_ver['useremail'];
-					$active 	= $user_ver['active']; 
-					$id			= $user_ver['id'];
-					//save in htaccess
-					$password 	= $user_ver['pass'];
-		
-					$to      	= $useremail;
-					$subject 	= 'اکانت شما فعال شد';
-					$message 	= "<b>از اینکه اشتراک ما را پذیرفته اید متشکریم </b><br/>
+						$sql_del	= mysql_query("UPDATE `users` SET `active` = '1' , `time` ='". $time. "'  , `endtime`= '". $endtime ."' , `cat`='". $catid."' WHERE `id` ='".$id."';");
+						$time		= jgetgmdate($time);
+						$endtime	= jgetgmdate($endtime);
+
+						$user_ver 	=  mysql_fetch_array(mysql_query("SELECT * FROM `users` where `user`='$username'"));
+						$useremail 	= $user_ver['useremail'];
+						$active 	= $user_ver['active'];
+						$id			= $user_ver['id'];
+						//save in htaccess
+						$password 	= $user_ver['pass'];
+
+						$to      	= $useremail;
+						$subject 	= 'اکانت شما فعال شد';
+						$message 	= "<b>از اینکه اشتراک ما را پذیرفته اید متشکریم </b><br/>
 					<p> ما همواره در تلاشیم تا بتوانیم بهترین خدمات را برای شما فرآهم آوریم </p>
 					<table border='0' width='100%'>
 						<tr>
@@ -139,11 +204,15 @@ if(is_numeric($cat_time)){
 						</table><br />
 					 <p> هم اکنون شما میتوانید با رمز عبور: <b>" . $user_ver['pass'] ."</b> در سایت وارد شوید</p>
 					 <b>شماره تراکنش پرداخت شما : <span style='color:#900'>". $tran_id ."</span> میباشد </b>";
-					//echo "$to, $subject, $message";
-					mail($to, $subject, $message);
-				}
-				else{
-					echo "<div class='error msg'>پرداخت با موفقیت انجام نشد کد خطا: $result</div>";
+						//echo "$to, $subject, $message";
+						mail($to, $subject, $message);
+					}
+					else{
+						echo "<div class='error msg'>'خطا در پرداخت. کد خطا: '" . $data['code'] . '<br/>' . $data['status'] . "</div>";
+					}
+				}else{
+					echo "<div class='error msg'>پاسخی از سرویس دهنده دریافت نشد. لطفا دوباره تلاش نمائید</div>";
+					echo '';
 				}
 			}else{
 				echo "<div class='error msg'>فاکتور پرداخت نشده است</div>";

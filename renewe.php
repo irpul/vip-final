@@ -42,6 +42,70 @@ $password = $_SESSION ["resller_password"];
 <!--  make account -->
 <div class="box3 grid_12">
 <?php
+function post_data($url,$params,$token) {
+	ini_set('default_socket_timeout', 15);
+
+	$headers = array(
+		"Authorization: token= {$token}",
+		'Content-type: application/json'
+	);
+
+	$handle = curl_init($url);
+	curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 30);
+	curl_setopt($handle, CURLOPT_TIMEOUT, 40);
+
+	curl_setopt($handle, CURLOPT_POSTFIELDS, json_encode($params) );
+	curl_setopt($handle, CURLOPT_HTTPHEADER, $headers );
+
+	$response = curl_exec($handle);
+	//error_log('curl response1 : '. print_r($response,true));
+
+	$msg='';
+	$http_code = intval(curl_getinfo($handle, CURLINFO_HTTP_CODE));
+
+	$status= true;
+
+	if ($response === false) {
+		$curl_errno = curl_errno($handle);
+		$curl_error = curl_error($handle);
+		$msg .= "Curl error $curl_errno: $curl_error";
+		$status = false;
+	}
+
+	curl_close($handle);//dont move uppder than curl_errno
+
+	if( $http_code == 200 ){
+		$msg .= "Request was successfull";
+	}
+	else{
+		$status = false;
+		if ($http_code == 400) {
+			$status = true;
+		}
+		elseif ($http_code == 401) {
+			$msg .= "Invalid access token provided";
+		}
+		elseif ($http_code == 502) {
+			$msg .= "Bad Gateway";
+		}
+		elseif ($http_code >= 500) {// do not wat to DDOS server if something goes wrong
+			sleep(2);
+		}
+	}
+
+	$res['http_code'] 	= $http_code;
+	$res['status'] 		= $status;
+	$res['msg'] 		= $msg;
+	$res['data'] 		= $response;
+
+	if(!$status){
+		//error_log(print_r($res,true));
+	}
+	return $res;
+}
+
+
 	if($_POST['submitrenew'] and !$_POST['cat']) echo '<div class="error msg">'.'لطفا مدت زمان اشتراک خود را تعیین کنید'.'</div>';
 	if($_POST['cat'] and $_POST['submitrenew']){
 		$cat 			= $_POST['cat'];
@@ -68,8 +132,7 @@ $password = $_SESSION ["resller_password"];
 		
 		
 		$parameters = array(
-			'plugin' 		=> 'VIP_Final',
-			'webgate_id' 	=> $MerchantID,
+			'method' 		=> 'payment',
 			'order_id'		=> $order_id,
 			'product'		=> $product,
 			'payer_name'	=> $username,
@@ -80,16 +143,23 @@ $password = $_SESSION ["resller_password"];
 			'callback_url' 	=> $callback_url,
 			'address' 		=> '',
 			'description' 	=> $description,
+			'test_mode' 	=> false,
 		);
-		try {
-			$client = new SoapClient('https://irpul.ir/webservice.php?wsdl' , array('soap_version'=>'SOAP_1_2','cache_wsdl'=>WSDL_CACHE_NONE ,'encoding'=>'UTF-8'));
-			$result = $client->Payment($parameters);
-		}catch (Exception $e) { echo 'Error'. $e->getMessage();  }
 
-		if( $result['res_code'] === 1 ){
-			header("Location: " . $result['url']);
-		} else {
-			echo 'ERR: ' . $result['res_code'] . ' ' . $result['status'];
+		$result 	= post_data('https://irpul.ir/ws.php', $parameters, $token );
+
+		if( isset($result['http_code']) ){
+			$data =  json_decode($result['data'],true);
+
+			if( isset($data['code']) && $data['code'] === 1){
+				header("Location: " . $data['url']);
+				exit;
+			}
+			else{
+				echo "Error Code: ".$data['code'] . ' ' . $data['status'];
+			}
+		}else{
+			echo 'پاسخی از سرویس دهنده دریافت نشد. لطفا دوباره تلاش نمائید';
 		}
 	}
 ?>

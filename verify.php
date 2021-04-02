@@ -81,7 +81,7 @@ if( isset($_GET['irpul_token']) ){
 		
 		if($status == 'paid')	
 		{			
-			$api = $MerchantID;
+			$api = $token;
 			$result = gett($api,$tran_id,$Amount);
 				
 			if($result == '1'){
@@ -144,6 +144,70 @@ if( isset($_GET['irpul_token']) ){
 </body>
 
 <?php
+function post_data($url,$params,$token) {
+	ini_set('default_socket_timeout', 15);
+
+	$headers = array(
+		"Authorization: token= {$token}",
+		'Content-type: application/json'
+	);
+
+	$handle = curl_init($url);
+	curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 30);
+	curl_setopt($handle, CURLOPT_TIMEOUT, 40);
+
+	curl_setopt($handle, CURLOPT_POSTFIELDS, json_encode($params) );
+	curl_setopt($handle, CURLOPT_HTTPHEADER, $headers );
+
+	$response = curl_exec($handle);
+	//error_log('curl response1 : '. print_r($response,true));
+
+	$msg='';
+	$http_code = intval(curl_getinfo($handle, CURLINFO_HTTP_CODE));
+
+	$status= true;
+
+	if ($response === false) {
+		$curl_errno = curl_errno($handle);
+		$curl_error = curl_error($handle);
+		$msg .= "Curl error $curl_errno: $curl_error";
+		$status = false;
+	}
+
+	curl_close($handle);//dont move uppder than curl_errno
+
+	if( $http_code == 200 ){
+		$msg .= "Request was successfull";
+	}
+	else{
+		$status = false;
+		if ($http_code == 400) {
+			$status = true;
+		}
+		elseif ($http_code == 401) {
+			$msg .= "Invalid access token provided";
+		}
+		elseif ($http_code == 502) {
+			$msg .= "Bad Gateway";
+		}
+		elseif ($http_code >= 500) {// do not wat to DDOS server if something goes wrong
+			sleep(2);
+		}
+	}
+
+	$res['http_code'] 	= $http_code;
+	$res['status'] 		= $status;
+	$res['msg'] 		= $msg;
+	$res['data'] 		= $response;
+
+	if(!$status){
+		//error_log(print_r($res,true));
+	}
+	return $res;
+}
+
+
 function url_decrypt($string){
 	$counter = 0;
 	$data = str_replace(array('-','_','.'),array('+','/','='),$string);
@@ -167,17 +231,15 @@ function url_decrypt($string){
 	}
 }
 
-function gett($api,$tran_id,$amount){
-	$parameters = array
-	(
-		'webgate_id'	=> $api,
+function gett($token,$tran_id,$amount){
+	$parameters = array(
+
+		'method' 	    => 'verify',
 		'tran_id' 		=> $tran_id,
 		'amount'	 	=> $amount,
 	);
-	try {
-		$client = new SoapClient('https://irpul.ir/webservice.php?wsdl' , array('soap_version'=>'SOAP_1_2','cache_wsdl'=>WSDL_CACHE_NONE ,'encoding'=>'UTF-8'));
-		$result = $client->PaymentVerification($parameters);
-	}catch (Exception $e) { echo 'Error'. $e->getMessage();  }
+	$result =  post_data('https://irpul.ir/ws.php', $parameters, $token );
+
 	return $result;
 }
 ?>

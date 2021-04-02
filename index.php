@@ -1,10 +1,10 @@
-﻿
-<?php
+﻿<?php
 
 @session_start();
 @ob_start();
 include("config.php");
 // register form 
+
 
 
 if ($_POST['submit2'])
