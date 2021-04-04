@@ -119,7 +119,7 @@ function post_data($url,$params,$token) {
 		}
 		$decrypted = base64_decode($data);
 		
-		$check = array('tran_id','order_id','amount','refcode','status');
+		$check = array('trans_id','order_id','amount','refcode','status');
 		foreach($check as $str){
 			str_replace($str,'',$decrypted,$count);
 			if($count > 0){
@@ -141,7 +141,7 @@ function post_data($url,$params,$token) {
 		$decrypted 		= url_decrypt( $irpul_token );
 		if($decrypted['status']){
 			parse_str($decrypted['data'], $ir_output);
-			$tran_id 	= $ir_output['tran_id'];
+			$trans_id 	= $ir_output['trans_id'];
 			$order_id 	= $ir_output['order_id'];
 			//$amount 	= $ir_output['amount'];
 			$refcode	= $ir_output['refcode'];
@@ -151,7 +151,7 @@ function post_data($url,$params,$token) {
 
 				$parameters = array(
 					'method' 	    => 'verify',
-					'trans_id' 		=> $tran_id,
+					'trans_id' 		=> $trans_id,
 					'amount'	 	=> $Amount,
 				);
 
@@ -167,7 +167,7 @@ function post_data($url,$params,$token) {
 							<div id="desc" class="grid_12">
 								<div class="success msg">
 									<p>پرداخت شما با موفقیت انجام شد</p>
-									<p>شماره تراکنش شما : <?php echo $tran_id ?></p>
+									<p>شماره تراکنش شما : <?php echo $trans_id ?></p>
 									<p>لطفا در حفظ این شماره تراکنش دقت فرمایید</p>
 								</div>
 							</div>
@@ -203,7 +203,7 @@ function post_data($url,$params,$token) {
 						</tr>
 						</table><br />
 					 <p> هم اکنون شما میتوانید با رمز عبور: <b>" . $user_ver['pass'] ."</b> در سایت وارد شوید</p>
-					 <b>شماره تراکنش پرداخت شما : <span style='color:#900'>". $tran_id ."</span> میباشد </b>";
+					 <b>شماره تراکنش پرداخت شما : <span style='color:#900'>". $trans_id ."</span> میباشد </b>";
 						//echo "$to, $subject, $message";
 						mail($to, $subject, $message);
 					}
