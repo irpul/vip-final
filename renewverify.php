@@ -114,13 +114,13 @@ function post_data($url,$params,$token) {
 	$Amount = $cat_p['price']; //Amount will be based on Rial
 	
 	if( isset($_POST['trans_id']) && isset($_POST['order_id']) && isset($_POST['amount']) && isset($_POST['refcode']) && isset($_POST['status']) ){
-			$trans_id 	= $ir_output['trans_id'];
-			$order_id 	= $ir_output['order_id'];
-			//$amount 	= $ir_output['amount'];
-			$refcode	= $ir_output['refcode'];
-			$status 	= $ir_output['status'];
-			
-			if($status == 'paid'){
+		$trans_id 	= $ir_output['trans_id'];
+		$order_id 	= $ir_output['order_id'];
+		//$amount 	= $ir_output['amount'];
+		$refcode	= $ir_output['refcode'];
+		$status 	= $ir_output['status'];
+		
+		if($status == 'paid'){
 
 				$parameters = array(
 					'method' 	    => 'verify',
